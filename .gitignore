@@ -1,0 +1,45 @@
+# Secrets / environment
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Runtime state / databases / logs
+.aura/
+*.sqlite
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.db
+*.log
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local helper scripts (machine-specific absolute paths)
+start-backend.ps1
+
+# Internal working docs (build scaffolding, not part of the published project)
+MASTER_BUILD_PROMPT.md
+MEGA_MASTER_PROMPT.md
+OPUS_SUPER_TEST.md
+RESEARCHER_PROMPT.md
+VIDEO_DEMO_MASTER_PROMPT.md

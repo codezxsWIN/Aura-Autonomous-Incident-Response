@@ -4,8 +4,15 @@
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)
+![LangGraph](https://img.shields.io/badge/orchestration-LangGraph-1C3C3C)
 ![Tests](https://img.shields.io/badge/tests-122%20passing-2E7D32)
+![License](https://img.shields.io/badge/license-MIT-3F6FD6)
 ![Runtime](https://img.shields.io/badge/frontend-no%20build%20step-5A6170)
+
+<p align="center">
+  <img src="docs/images/dashboard-hero.jpg" alt="Aura dashboard showing the trust charter and a live recovery gate where an independent HTTP 200 probe has passed" width="820">
+</p>
+<p align="center"><em>Aura can act &mdash; but evidence decides what it is allowed to claim.</em></p>
 
 Aura is a local proof of concept for a difficult operational promise: an autonomous system may act, but it cannot call an incident resolved until independent evidence says the affected journey is healthy.
 
@@ -13,19 +20,41 @@ The model does not choose infrastructure actions. Deterministic policy does. Uns
 
 ## Why Aura
 
-Most remediation demos stop at a tool returning `success`. Aura tests the outcome instead:
+Most remediation demos stop at a tool returning `success`. Aura tests the **outcome** instead: it only claims recovery after an independent probe re-observes the affected journey as healthy.
 
-```text
-observed HTTP 503
-  -> ordinary browser telemetry
-  -> deterministic incident decision
-  -> policy-bounded mutation
-  -> authenticated HTTP 200 recovery probe
-  -> independent customer retry HTTP 200
-  -> verified evidence receipt
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as Customer browser
+    participant API as FastAPI ingress
+    participant AG as Aura agents
+    participant CO as Checkout state
+    participant V as Independent verifier
+    U->>API: Complete purchase
+    API->>CO: Attempt checkout
+    CO-->>U: HTTP 503, fault active
+    U->>API: Ordinary telemetry (clicks, DOM, status)
+    API->>AG: Threshold crossed, open incident
+    AG->>AG: Diagnose cause and bind a SAFE policy
+    AG->>CO: Apply bounded mutation, fault on to off
+    AG->>V: Authenticated recovery probe
+    V-->>AG: HTTP 200, healthy
+    AG->>U: Verified recovery message
+    Note over AG,V: An unhealthy probe escalates.<br/>Aura never claims recovery it cannot prove.
 ```
 
-The failed request, mutation, probe, and retry use the same tenant-scoped local checkout state. If the action reports success but the service remains unhealthy, Aura escalates and withholds recovery language.
+The failed request, the mutation, the probe, and the customer retry all use the **same** tenant-scoped local checkout state. If a tool reports success while the service stays unhealthy, Aura escalates and withholds every word of recovery language.
+
+## See It in Action
+
+| Closed loop, proven | Tamper-evident receipt |
+| :---: | :---: |
+| ![Causal topology, root cause at 94 percent confidence, and the before and after closed-loop proof with a retained mutation ID](docs/images/closed-loop-proof.jpg) | ![Verified recovery receipt hash chain and identity-free recurrence memory](docs/images/evidence-receipt.jpg) |
+| Root cause on the causal graph, the live `503 -> action -> 200` proof with a retained mutation ID, and four accountable decision stages. | A SHA-256 hash chain over every evidence entry, verified server-side, alongside identity-free recurrence memory. |
+
+**Refusal is a first-class outcome.** When no SAFE policy covers the fault, Aura leaves the dependency degraded, blocks the action, and tells the customer the truth instead of fabricating a resolution.
+
+![Refusal proof showing recovery claim refused, BLOCKED policy denied, and human ownership of the unresolved incident](docs/images/truthful-refusal.jpg)
 
 ## Quick Start
 
@@ -88,17 +117,39 @@ Aura does **not** claim production deployment, production Kubernetes access, dur
 
 ```mermaid
 flowchart LR
-    Browser[Browser checkout] -->|observed telemetry| API[FastAPI ingress]
+    Browser([Browser checkout]) -->|observed telemetry| API[FastAPI ingress]
     API --> Sentry[Sentry]
-    Sentry -->|threshold reached| Graph[LangGraph supervisor]
+    Sentry -->|threshold reached| Graph[[LangGraph supervisor]]
     Graph --> Diagnose[Diagnostician]
     Diagnose --> Impact[Architect]
-    Impact --> Policy[Deterministic policy]
+    Impact --> Policy{{Deterministic policy}}
     Policy --> Action[Bounded action]
     Action --> Probe{Authenticated probe}
     Probe -->|healthy| Retry[Customer retry]
     Probe -->|unhealthy| Escalate[Human escalation]
-    Retry --> Receipt[Evidence receipt]
+    Retry --> Receipt[(Evidence receipt)]
+    classDef safe fill:#12351f,stroke:#2E7D32,color:#e7f7ec;
+    classDef gate fill:#15294d,stroke:#3F6FD6,color:#e8f0ff;
+    classDef danger fill:#3a1414,stroke:#c0392b,color:#fce8e8;
+    class Policy,Action,Retry,Receipt safe;
+    class Probe gate;
+    class Escalate danger;
+```
+
+Every incident advances through the same accountable lifecycle, and no path reaches `Resolved` without passing independent verification:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Detecting: telemetry threshold crossed
+    Detecting --> Diagnosing: signals confirmed
+    Diagnosing --> Acting: SAFE policy bound
+    Diagnosing --> Escalated: no SAFE policy (fail closed)
+    Acting --> Verifying: bounded mutation applied
+    Verifying --> Resolved: independent probe healthy
+    Verifying --> Acting: unhealthy, one bounded retry
+    Verifying --> Escalated: retry budget exhausted
+    Resolved --> [*]
+    Escalated --> [*]
 ```
 
 The runtime is Python-only. FastAPI serves native HTML, CSS, JavaScript, Canvas, and SVG, so the dashboard has no npm dependency or frontend build step.
